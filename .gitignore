@@ -1,2 +1,40 @@
-*.md
-notebook.ipynb
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+*.env
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS system files
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Local development settings
+.env
+.env.local
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Keep these files
+!README.md

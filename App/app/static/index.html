@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Emociones</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .emotion-result {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress {
+            height: 100%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            line-height: 20px;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emotion-label {
+            font-weight: bold;
+        }
+        .emotion-score {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>MoodGraph</h1>
+    <div>
+        <p>Escribe un texto y descubre las emociones predominantes:</p>
+        <textarea id="txt" rows="6" placeholder="Por ejemplo: Me siento muy feliz por haber aprobado el examen final..."></textarea>
+    </div>
+    <div class="button-container">
+        <button id="analyzeBtn" onclick="send()">Analizar</button>
+        <div id="loader" class="loader"></div>
+    </div>
+    <div id="results">
+        <h2>Resultados:</h2>
+        <div id="emotions-container"></div>
+    </div>
+
+    <script>
+        const emotionColors = {
+            "joy": "#27ae60",
+            "sadness": "#3498db",
+            "anger": "#e74c3c",
+            "fear": "#8e44ad",
+            "surprise": "#f39c12",
+            "disgust": "#7f8c8d",
+            "other": "#95a5a6"
+        };
+
+        const emotionTranslations = {
+            "joy": "Alegría",
+            "sadness": "Tristeza",
+            "anger": "Enojo",
+            "fear": "Miedo",
+            "surprise": "Sorpresa",
+            "disgust": "Disgusto",
+            "other": "Otra"
+        };
+
+        async function send() {
+            const text = document.getElementById("txt").value.trim();
+            if (!text) {
+                alert("Por favor, ingresa algún texto para analizar.");
+                return;
+            }
+
+            const analyzeBtn = document.getElementById("analyzeBtn");
+            const loader = document.getElementById("loader");
+            
+            analyzeBtn.disabled = true;
+            loader.style.display = "inline-block";
+            document.getElementById("results").style.display = "none";
+
+            try {
+                const res = await fetch("/predict", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({text: text})
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Error: ${res.status}`);
+                }
+
+                const data = await res.json();
+                displayResults(data.top_3);
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Ocurrió un error al analizar el texto. Intenta de nuevo.");
+            } finally {
+                analyzeBtn.disabled = false;
+                loader.style.display = "none";
+            }
+        }
+
+        function displayResults(emotions) {
+            const container = document.getElementById("emotions-container");
+            container.innerHTML = "";
+
+            emotions.forEach(emotion => {
+                const percentage = Math.round(emotion.score * 100);
+                const emotionName = emotionTranslations[emotion.label] || emotion.label;
+                const color = emotionColors[emotion.label] || "#95a5a6";
+                
+                const emotionDiv = document.createElement("div");
+                emotionDiv.className = "emotion-result";
+                
+                const labelDiv = document.createElement("div");
+                labelDiv.className = "emotion-label";
+                labelDiv.textContent = emotionName;
+                
+                const scoreDiv = document.createElement("div");
+                scoreDiv.className = "emotion-score";
+                scoreDiv.textContent = `${percentage}%`;
+                
+                emotionDiv.appendChild(labelDiv);
+                emotionDiv.appendChild(scoreDiv);
+                
+                const progressBarDiv = document.createElement("div");
+                progressBarDiv.className = "progress-bar";
+                
+                const progressDiv = document.createElement("div");
+                progressDiv.className = "progress";
+                progressDiv.style.width = `${percentage}%`;
+                progressDiv.style.backgroundColor = color;
+                
+                progressBarDiv.appendChild(progressDiv);
+                
+                container.appendChild(emotionDiv);
+                container.appendChild(progressBarDiv);
+            });
+            
+            document.getElementById("results").style.display = "block";
+        }
+
+        // Allow pressing Enter to send
+        document.getElementById("txt").addEventListener("keypress", function(event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                send();
+            }
+        });
+    </script>
+</body>
+</html>
